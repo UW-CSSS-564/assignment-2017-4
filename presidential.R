@@ -43,9 +43,9 @@ L2_fit <- sampling(L2_mod, data = list(n = n, p = p, y = y, x = x, lambda = lamb
 L1_fit <- sampling(L1_mod, data = list(n = n, p = p, y = y, x = x, lambda = lambda))
 
 # Examine
-summary(MLE_fit, pars = c("alpha", "beta"))$summary
-summary(L2_fit, pars = c("alpha", "beta"))$summary
-summary(L1_fit, pars = c("alpha", "beta"))$summary
+summary(MLE_fit, pars = c("alpha", "beta"))$summary[,1]
+summary(L2_fit, pars = c("alpha", "beta"))$summary[,1]
+summary(L1_fit, pars = c("alpha", "beta"))$summary[,1]
 
 # What does a change in lambda do to the coefficients?
 lambda_seq <- seq(0.1, 30.1, by = 6)
@@ -88,6 +88,7 @@ L1_net <- glmnet(x,y)
 L1_net$beta
 L1_map$par[1:(p + 1)]
 plot(glmnet(x, y, alpha = 1))
+abline(0,0)
 print(glmnet(x, y))
 ###################################################################
 
@@ -107,16 +108,24 @@ for (i in 9:n) {
   # improper_fit <- sampling(MLE_mod, data = list(n = i - 1, p = p, y = Y, x = X))
   improper_pred <- mean(extract(improper_fit, 'alpha')$alpha) + x[i,]%*%apply(extract(improper_fit, 'beta')$beta, 2, mean)
   results$improper[i-1] <- (y[i] - improper_pred)^2
+  
   normal_fit <- sampling(L2_mod, data = list(n = i - 1, p = p, y = Y, x = X, lambda = 0.3), refresh = -1)
   normal_pred <- mean(extract(normal_fit, 'alpha')$alpha) + x[i,]%*%apply(extract(normal_fit, 'beta')$beta, 2, mean)
   results$normal[i-1] <- (y[i] - normal_pred)^2
+  
   laplace_fit <- sampling(L1_mod, data = list(n = i - 1, p = p, y = Y, x = X, lambda = 0.3), refresh = -1)
   laplace_pred <- mean(extract(laplace_fit, 'alpha')$alpha) + x[i,]%*%apply(extract(laplace_fit, 'beta')$beta, 2, mean)
   results$laplace[i-1] <- (y[i] - laplace_pred)^2
+  
   laplace_cauchy_fit <- sampling(L1_hyper_mod, data = list(n = i - 1, p = p, y = Y, x = X), refresh = -1)
   laplace_cauchy_pred <- mean(extract(laplace_cauchy_fit, 'alpha')$alpha) + x[i,]%*%apply(extract(laplace_cauchy_fit, 'beta')$beta, 2, mean)
   results$laplace_cauchy[i-1] <- (y[i] - laplace_cauchy_pred)^2
+  
   horse_fit <- sampling(horse_mod, data = list(n = i - 1, p = p, y = Y, x = X, df_local = 3, df_global = 3), refresh = -1)
   horse_pred <- mean(extract(horse_fit, 'alpha')$alpha) + x[i,]%*%apply(extract(horse_fit, 'beta')$beta, 2, mean)
   results$horseshoe[i-1] <- (y[i] - horse_pred)^2
 }
+
+# Normal prior w/ Cauchy parameter
+# Different measures of error
+# Equivalence between MAP and glmnet
