@@ -7,10 +7,6 @@ date: "May 14, 2017"
 
 ## Instructions
 
-1. Fork this repository to your account
-2. Edit the file `solutions.Rmd` with your solutions to the problems.
-3. Submit a pull request to have it graded. Include an up-to-date knitted HTML or PDF file.
-
 For updates and questions follow the Slack channel: [#assignment4](https://uwcsss564.slack.com/messages/C5DBV8266).
 
 This assignment will require the following R packages:
@@ -19,50 +15,89 @@ library("rstan")
 library("rstanarm")
 ```
 
-And you might as well use all your cores:
+Set these 
 ```{r}
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 ```
 
 
-## Problem 1: Prediction with Bayesian Penalized Regression
-In this problem, you will perform a prediction test similar to May 11th's lab. You will compare four different shrinkage methods' prediction performance on a data set from the same [paper](https://www.cambridge.org/core/services/aop-cambridge-core/content/view/11866974EE2888D4A2988309FC6B602F/S1047198700013838a.pdf/improving_predictions_using_ensemble_bayesian_model_averaging.pdf). This data set contains a monthly record of whether or not a country was experiencing a violent insurgency from 1997 to 2010 for a number of countries, mostly in Asia and the South Pacific.
-
-Your goal is to develop a model that predicts, as well as possible, future violent insurgencies in India from past ones. The higher-ups at the Department of Defense come to you with two specific objectives:
-1. Choose a model that predicts the next month's insurgency status. Because this model is for such short-term use, a false negative (predicting no insurgency when there in fact will be one) should be considered 10 times as bad as a false positive.
-2. Choose a model that predicts the next twelve months' insurgency status. For this model, either type of error is equally bad.
-
-They are concerned about prompt availability of all data in the future, so they ask your model to include just 6 variables: the number of minority groups in the country ("nminorities"), GDP per capita ("gdppc"), the amount of anti-government violence ("antiGovtviolence"), the degree of cooperation with the USA ("USAcoop"), the degree of conflict with the USA ("USAconf"), and how near the next major election is ("nextelection").
-
-```{r}
-icews <- read.csv('data/icews.csv')
-india <- icews[icews$country == "India",-1]
-
-# The data
-y <- india$insurgency
-x <- india[c('nminorities', 'gdppc', 'antiGovtviolence', 'USAcoop', 'USAconf', 'nextelection')]
-n <- length(y)
-p <- dim(india)[2]
-
-# What preprocessing of the data is necessary?
-x$gdppc <- log(x$gdppc)
-x$nextelection <- log(x$nextelection)
-# TODO: preprocess x and y more
-
-df <- cbind(y, x)
-colnames(df)[1] <- 'insurgency'
-
-# Example model fit
-lmod <- glm(insurgency ~ ., family = binomial(), data = df)
-lasso_mod <- stan_glm(insurgency ~ ., family = binomial(), data = df, prior = lasso())
-```
+@FearonLaitin2003 is a famous paper in the civil war (intra-state) war literature.
+It analyzes the factors associated with the onset of civil war 
 
 
-*Note: it is justifiable to only base predictive performance on the last few years' data, since one might assume that conditions will change rapidly enough that old insurgencies will provide relatively little information. This also gives you an excuse to not spend forever waiting for code to run, which unfortunately you do not actually have in academia*
+@MontgomeryNyhan2010a replicate this work using Bayesian Model Averaging.
+We will replicate it using regularization methods. 
+Replication data is [here](http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip).
+
+**TODO** Run `f&l-rep.do` and save the results to clean up the Fearon and Laitin data to the form used in that paper.
 
 
-## Problem 2: Regularization Paths
-In this problem, you will compare the regularization paths of models with various types of shrinkage priors, as well as frequentist LASSO and ridge regression models (similar to the beginning of the May 11 lab).
+## Prediction with Bayesian Penalized Regression
 
-Can you use the type of prior distribution imposed on the regression coefficients to explain the shape of the regularization paths? [This paper](https://arxiv.org/pdf/1502.00560.pdf) may be of some help.
+Let $y_{c,y} \in \{0, 1\}$ be whether country $c$ in year $y$ has the onset of a 
+civil war.
+We will model this as a logistic model in which the probability of civil war onset, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}'$.
+$$
+\begin{aligned}[t]
+y_{c,y} &\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
+\mu_{c,y} &= \mathrm{logit}^{-1}(\eta_{c,y}) = \frac{1}{1 + \exp(-\eta_{c,y})} \\
+\eta_{c,y} &= x_{c,y}' \beta 
+\end{aligned}
+$$
+
+Estimate the two models that BMA uses in the paper (with weakly informative priors) - calculate the LOO performance of these methods
+$$
+\begin{aligned}[t]
+\beta_0 &\sim N(0, 5) \\
+\beta_k &\sim N(0, 2.5) & \text{for $k \in 1, \dots, K$.}
+\end{aligned} 
+$$
+
+Estimate this model with all the varibles and the  following priors
+
+1. Weakly informative (as above)
+2. Normal prior
+3. Hierarchical Shrinkage (df = 3)
+
+(Don't do Lasso - since in the Bayesian setting it doesn't make sense)
+
+- Compare the LOO-PSIS stats for all these models. Which fits the best? 
+- Is the default LOO method appropriate? If not, discuss an approporiate CV method - (there is no unique answer)
+- What are the model sizes of each method - using the LOO-PSIS method?
+- Plot the mean and 90% credible intervals for these models. How do they differ?
+- The HS prior more agressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a threshhold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature, but think of your own idea---you don't need to consider it formally.
+
+Ideas:
+
+- Compare posterior predictive distributions for years and countries - does it fit any worse than others. We could calculate posterior predictive distributions of classification.
+
+## Taking Time Seriously
+
+Generally the probbility of war onset is a function of time since the last war.
+One variable not in the previous models is the time since the last civil war; though it is discussed in a footnote of @Fearon1998a [fn. 26].
+@BeckKatzTucker1998a note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event.
+As such we could rewrite the model
+$$
+\eta_{c,y} = x_{c,y}'\beta + f(d_{c,y})
+$$
+where $d_{i,t}$ is the time since the last civil war or the first observation of that country in the data.
+
+One issue is that we don't know the duration function, $f$.
+Since $f$ is unkown, and the analyst generally has few priors about it, generally a flexible funcitonal form is used. @BeckKatzTucker1998a suggest using a cubic spline, while @CarterSignorino2010a suggest a polynomial.
+In particular, @CarterSignorino2010a suggest a cubic polynomial, meaning the linear predictors now becomes,
+$$
+\eta_{c,y} = x_{c,y}'\beta + \gamma_1 d_{c,y} + \gamma_2 d_{c,y}^2 + \gamma_3 d_{c,y}^3
+$$
+
+- @CarterSignorino2010 argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.
+- (optional?) @Box-SteffensmeierZorn2001a note that including a duration function in the model is equivalent to a "proportional hazards" assumption---meaning that all variables have the same effect on the probability of failure regardless of the duration. They suggest an F-test that interacts all variables with the logarithm of the duration. How would you address this concern using Bayesian regularization?
+- What about an overall time trend? 
+
+## Hierarchical Model
+
+TODO
+
+## Rare Events
+
+Estimate the model with a rare-events estimator
