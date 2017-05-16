@@ -13,9 +13,12 @@ This assignment will require the following R packages:
 ```{r, message=FALSE}
 library("rstan")
 library("rstanarm")
+library("foreign")
+library("tidyverse")
+library("loo")
 ```
 
-Set these 
+Set these for fast sampling
 ```{r}
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
@@ -30,31 +33,47 @@ It analyzes the factors associated with the onset of civil war
 We will replicate it using regularization methods. 
 Replication data is [here](http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip).
 
-**TODO** Run `f&l-rep.do` and save the results to clean up the Fearon and Laitin data to the form used in that paper.
-
+```{r}
+wars <- read.dta('nwarsl.dta')
+other <- read.dta('fl.dta')
+df <- inner_join(wars, other, by = c('ccode', 'year'))
+df <- df[df$onset != 4,]  # coding error
+df$loglang <- log(df$numlang)
+keepvars <- "onset warl gdpenl lpopl1 lmtnest ncontig Oil nwstate instab polity2l ethfrac relfrac anocl deml nwarsl plural plurrel muslim loglang colfra eeurop lamerica ssafrica asia nafrme second"
+keepvars <- strsplit(keepvars, split = " ")[[1]]
+df <- df[,keepvars]
+```
 
 ## Prediction with Bayesian Penalized Regression
 
 Let $y_{c,y} \in \{0, 1\}$ be whether country $c$ in year $y$ has the onset of a 
 civil war.
-We will model this as a logistic model in which the probability of civil war onset, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}'$.
+We will model this as a logistic model in which the probability of civil war onset, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}$.
 $$
 \begin{aligned}[t]
 y_{c,y} &\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
 \mu_{c,y} &= \mathrm{logit}^{-1}(\eta_{c,y}) = \frac{1}{1 + \exp(-\eta_{c,y})} \\
-\eta_{c,y} &= x_{c,y}' \beta 
+\eta_{c,y} &= x_{c,y} \beta 
 \end{aligned}
 $$
 
-Estimate the two models that BMA uses in the paper (with weakly informative priors) - calculate the LOO performance of these methods
+Estimate the two models that BMA uses in the paper (with weakly informative priors), and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you're unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by Fearon and Laitin, and they are specified in the `f&l-rep.do` file in the reference-code directory, which is a Stata file. It shouldn't be too hard to figure out the model specification from this file, but Slack message one of us if you need a hint.
 $$
 \begin{aligned}[t]
 \beta_0 &\sim N(0, 5) \\
 \beta_k &\sim N(0, 2.5) & \text{for $k \in 1, \dots, K$.}
 \end{aligned} 
 $$
+Example:
+```{r}
+mod <- stan_glm(onset ~ loglang, family = binomial(), data = df)
+loo_mod <- loo(mod)
+mod2 <- stan_glm(onset ~ loglang + Oil, family = binomial(), data = df)
+loo_mod2 <- loo(mod2)
+compare(loo_mod, loo_mod2)
+```
 
-Estimate this model with all the varibles and the  following priors
+Now estimate this model with all 25 predictor variables and the following priors
 
 1. Weakly informative (as above)
 2. Normal prior
@@ -63,14 +82,14 @@ Estimate this model with all the varibles and the  following priors
 (Don't do Lasso - since in the Bayesian setting it doesn't make sense)
 
 - Compare the LOO-PSIS stats for all these models. Which fits the best? 
-- Is the default LOO method appropriate? If not, discuss an approporiate CV method - (there is no unique answer)
+- Is the default LOO method appropriate? If not, discuss an approporiate cross-validation method - (there is no unique answer)
 - What are the model sizes of each method - using the LOO-PSIS method?
 - Plot the mean and 90% credible intervals for these models. How do they differ?
 - The HS prior more agressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a threshhold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature, but think of your own idea---you don't need to consider it formally.
 
 Ideas:
 
-- Compare posterior predictive distributions for years and countries - does it fit any worse than others. We could calculate posterior predictive distributions of classification.
+- Compare posterior predictive distributions for years and countries - does it fit any worse than others? We could calculate posterior predictive distributions of classification.
 
 ## Taking Time Seriously
 
