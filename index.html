@@ -124,8 +124,14 @@ $(document).ready(function () {
 </div>
 
 
-<div id="instructions" class="section level2">
+<div id="instructions" class="section level2 unnumbered">
 <h2>Instructions</h2>
+<p>This repository contains the assignment instructions. Submitted solutions will use a <strong>separate</strong> repository.</p>
+<ol style="list-style-type: decimal">
+<li>Fork <a href="https://github.com/UW-CSSS-564/assignment-2017-4-submissions">UW-CSSS-564/assignment-2017-4-submissions</a> repository to your account.</li>
+<li>Edit the file <code>README.Rmd</code> with your solutions to the problems.</li>
+<li>Submit a pull request to have it graded. Include either or both a HTML and PDF file.</li>
+</ol>
 <p>For updates and questions follow the Slack channel: <a href="https://uwcsss564.slack.com/messages/C5DBV8266">#assignment4</a>.</p>
 <p>This assignment will require the following R packages:</p>
 <pre class="r"><code>library(&quot;rstan&quot;)
@@ -133,12 +139,12 @@ library(&quot;rstanarm&quot;)
 library(&quot;haven&quot;)
 library(&quot;tidyverse&quot;)
 library(&quot;loo&quot;)</code></pre>
-<p>Set the following options for faster sampling sampling.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> This option sets the default to save a compiled model to disk and reuse it if the code hasn’t changed. This will avoid needless recompilation.</p>
+<p>Set the following options for faster sampling sampling.[^rprofile] This option sets the default to save a compiled model to disk and reuse it if the code hasn’t changed. This will avoid needless recompilation.</p>
 <pre class="r"><code>rstan_options(auto_write = TRUE)</code></pre>
 <p>If you sample with multiple chains and your computer has multiple cores, this will run the chains in parallel.</p>
 <pre class="r"><code>options(mc.cores = parallel::detectCores())</code></pre>
-<p><span class="citation">@FearonLaitin2003</span> is a famous paper in the civil war (intra-state) war literature. It analyzes the factors associated with the onset of civil (intra-state) war between 1945–99. They consider a variety of variables such as prior civil wars, per-capita income, population, non-contiguous state, oil-exporter, new-state, democracy, ethnic fractionalization.</p>
-<p><span class="citation">@MontgomeryNyhan2010a</span> replicate this work using Bayesian Model Averaging. This assignment pursues a similar replication, but we will use regularization The replication data for the original paper is <a href="http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip">here</a>.</p>
+<p><span class="citation">Fearon and Laitin (2003)</span> is a famous paper in the civil war (intra-state) war literature. It analyzes the factors associated with the onset of civil (intra-state) war between 1945–99. They consider a variety of variables such as prior civil wars, per-capita income, population, non-contiguous state, oil-exporter, new-state, democracy, ethnic fractionalization.</p>
+<p><span class="citation">Montgomery and Nyhan (2010)</span> replicate this work using Bayesian Model Averaging. This assignment pursues a similar replication, but we will use regularization The replication data for the original paper is <a href="http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip">here</a>.</p>
 <p>The original code is con</p>
 <pre class="r"><code># variables we'll use later
 keepvars &lt;- c(&quot;onset&quot;, &quot;warl&quot;, &quot;gdpenl&quot;, &quot;lpopl1&quot;, &quot;lmtnest&quot;, &quot;ncontig&quot;,
@@ -158,7 +164,7 @@ fl &lt;- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/
   select(one_of(keepvars))</code></pre>
 </div>
 <div id="replicating-fearon-and-laitin" class="section level2">
-<h2>Replicating Fearon and Laitin</h2>
+<h2><span class="header-section-number">0.1</span> Replicating Fearon and Laitin</h2>
 <p>Let <span class="math inline">\(y_{c,y} \in \{0, 1\}\)</span> be whether country <span class="math inline">\(c\)</span> in year <span class="math inline">\(y\)</span> has the onset of a civil war. We will model this as a logistic model in which the probability of civil war onset for a country-year, <span class="math inline">\(\mu_{c,y}\)</span>, is a function of <span class="math inline">\(K\)</span> predictors, <span class="math inline">\(x_{c,y}\)</span>. <span class="math display">\[
 \begin{aligned}[t]
 y_{c,y} &amp;\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
@@ -166,14 +172,14 @@ y_{c,y} &amp;\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
 \eta_{c,y} &amp;= x_{c,y} \beta 
 \end{aligned}
 \]</span> We will consider various prior distributions of the coefficient parameters, <span class="math inline">\(\beta\)</span>.</p>
-<p>Estimate the two models that <span class="citation">@MontgomeryNyhan2010a</span> uses in the paper using weakly informative priors, <span class="math display">\[
+<p>Estimate the two models that <span class="citation">Montgomery and Nyhan (2010)</span> uses in the paper using weakly informative priors, <span class="math display">\[
 \begin{aligned}[t]
 \beta_0 &amp;\sim N(0, 5) \\
 \beta_k &amp;\sim N(0, 2.5) &amp; \text{for $k \in 1, \dots, K$.}
 \end{aligned} 
 \]</span></p>
-<p>and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you’re unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by <span class="citation">@FearonLaitin2003a</span>. The original paper used Stata, and the code is contained in the file <a href="https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do">reference-code/f&amp;l-rep.do</a>. In Stata, the command <code>logit</code> is followed by the response variable and a lists of the predictors.</p>
-<p>To estimate this (and the other models). You can directly use either a Stan model, as we have used in class, or use the <strong>rstanarm</strong> package. The function <code>stan_glm</code> can estimate the See thhe vignette <a href="https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html">Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm</a> describes</p>
+<p>and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you’re unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by <span class="citation">Fearon and Laitin (2003)</span>. The original paper used Stata, and the code is contained in the file <a href="https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do">reference-code/f&amp;l-rep.do</a>. In Stata, the command <code>logit</code> is followed by the response variable and a lists of the predictors.</p>
+<p>To estimate this (and the other models). You can directly use either a Stan model, as we have used in class, or use the <strong>rstanarm</strong> package. The function <code>stan_glm</code> can estimate the See the vignette <a href="https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html">Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm</a> describes</p>
 <p>Here’s a few examples which run similar logit models:</p>
 <pre class="r"><code>mod &lt;- stan_glm(onset ~ loglang, family = binomial(), data = fl)
 loo_mod &lt;- loo(mod)
@@ -182,37 +188,35 @@ loo_mod2 &lt;- loo(mod2)
 compare(loo_mod, loo_mod2)</code></pre>
 </div>
 <div id="regularization-priors" class="section level2">
-<h2>Regularization Priors</h2>
-<p>Now estimate this model with all 25 predictor variables and the following priors. See</p>
-<pre><code>?priors</code></pre>
-<p>for more information.</p>
-<ol style="list-style-type: decimal">
-<li>Weakly informative (as above)</li>
-<li>Normal prior</li>
-<li>Hierarchical Shrinkage (<span class="math inline">\(df = 3\)</span>)</li>
-</ol>
+<h2><span class="header-section-number">0.2</span> Regularization Priors</h2>
 <ul>
+<li><p>Now estimate this model with all 25 predictor variables and the following priors</p>
+<ul>
+<li>weakly informative priors</li>
+<li>hierarchical shrinkage prior</li>
+</ul>
+<p>You can use either <strong>rstan</strong> or <strong>rstanarm</strong>.</p></li>
 <li><p>Plot the mean and 90% credible intervals for these models.</p>
 <ul>
 <li>How do the coefficients differ between models?</li>
 <li>Which coefficients have the largest effects?</li>
-<li>How do these results compare with the models chosen by <span class="citation">@FearonLaitin2003</span>?</li>
+<li>How do these results compare with the two models chosen in <span class="citation">Fearon and Laitin (2003)</span>?</li>
 </ul></li>
 </ul>
 </div>
 <div id="variable-scaling" class="section level2">
-<h2>Variable Scaling</h2>
+<h2><span class="header-section-number">0.3</span> Variable Scaling</h2>
 <p>Rerun these models but set <code>autoscale = FALSE</code>.</p>
 <ul>
 <li>What does this option do?<br />
 </li>
 <li>Which coefficients changed the most?</li>
 <li>Compare the changes in the coefficients to the standard deviations of these coefficients?</li>
-<li>Explain how autoscaling affects the priors on the coefficients.</li>
+<li>Explain how rescaling the variables affects the priors on the coefficients.</li>
 </ul>
 </div>
 <div id="model-comparison" class="section level2">
-<h2>Model Comparison</h2>
+<h2><span class="header-section-number">0.4</span> Model Comparison</h2>
 <ul>
 <li>Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean - and how would you address it?</li>
 <li>Which model has the best fit?</li>
@@ -221,35 +225,72 @@ compare(loo_mod, loo_mod2)</code></pre>
 </ul>
 </div>
 <div id="model-size" class="section level2">
-<h2>Model Size</h2>
+<h2><span class="header-section-number">0.5</span> Model Size</h2>
 <ul>
 <li>Compare the model sizes given by <code>loo</code> using the results from the previous section. How does that compare to the actual number of parameters in the model?</li>
-<li>The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn’t to get it “right”, but think about the problem prior to finding out how other’s have approached (and maybe solved?) the problem.</li>
+<li>The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn’t to get it “right”, but think about the problem prior to finding out how others have approached (and maybe solved?) the problem.</li>
 </ul>
 </div>
 <div id="posterior-predictive-checks" class="section level2">
-<h2>Posterior Predictive Checks</h2>
-<p>Thus far, we’ve only compared models using the log-posterior values. Using a staistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.</p>
+<h2><span class="header-section-number">0.6</span> Posterior Predictive Checks</h2>
+<p>Thus far, we’ve only compared models using the log-posterior values. Using a statistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.</p>
 </div>
 <div id="taking-time-seriously" class="section level2">
-<h2>Taking Time Seriously</h2>
-<p>One variable not in the previous models is the time since the last civil war <a href="#fn2" class="footnoteRef" id="fnref2"><sup>2</sup></a>. <span class="citation">@BeckKatzTucker1998a</span> note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event. As such we could rewrite the model <span class="math display">\[
+<h2><span class="header-section-number">0.7</span> Taking Time Seriously</h2>
+<p>One variable not in the previous models is the time since the last civil war.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> <span class="citation">Beck, Katz, and Tucker (1998)</span> note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event. As such we could rewrite the model <span class="math display">\[
 \eta_{c,y} = x_{c,y}'\beta + f(d_{c,y})
 \]</span> where <span class="math inline">\(d_{i,t}\)</span> is the time since the last civil war or the first observation of that country in the data.</p>
-<p>One issue is that we don’t know the duration function, <span class="math inline">\(f\)</span>. Since <span class="math inline">\(f\)</span> is unknown, and the analyst generally has few priors about it, generally a flexible functional form is used. <span class="citation">@BeckKatzTucker1998a</span> suggest using a cubic spline, while <span class="citation">@CarterSignorino2010a</span> suggest a polynomial. In particular, <span class="citation">@CarterSignorino2010a</span> suggest a cubic polynomial, meaning the linear predictors now becomes, <span class="math display">\[
+<p>One issue is that we don’t know the duration function, <span class="math inline">\(f\)</span>. Since <span class="math inline">\(f\)</span> is unknown, and the analyst generally has few priors about it, generally a flexible functional form is used. <span class="citation">Beck, Katz, and Tucker (1998)</span> suggest using a cubic spline, while <span class="citation">Carter and Signorino (2010)</span> suggest a polynomial. In particular, <span class="citation">Carter and Signorino (2010)</span> suggest a cubic polynomial, meaning the linear predictors now becomes, <span class="math display">\[
 \eta_{c,y} = x_{c,y}'\beta + \gamma_1 d_{c,y} + \gamma_2 d_{c,y}^2 + \gamma_3 d_{c,y}^3
 \]</span></p>
 <ul>
-<li><span class="citation">@CarterSignorino2010</span> argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.</li>
-<li><span class="citation">@Box-SteffensmeierZorn2001a</span> discuss how including only duration function as above in the model is equivalent to a “proportional hazards” assumption. In this context, it would mean that all variables have the same effect (coefficient) on the probability of failure regardless of the duration. They suggest estimating a model that interacts all the variables with a function of the duration, and running an F-test that all the interactions were zero. How would you address this concern using Bayesian regularization?</li>
-<li>The time since the last war is not the only way in which the</li>
+<li><span class="citation">Carter and Signorino (2010)</span> argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.</li>
+<li><span class="citation">Box-Steffensmeier and Zorn (2001)</span> discuss how including only duration function as above in the model is equivalent to a “proportional hazards” assumption. In this context, it would mean that all variables have the same effect (coefficient) on the probability of failure regardless of the duration. They suggest estimating a model that interacts all the variables with a function of the duration, and running an F-test that all the interactions were zero. How would you address this concern using Bayesian regularization?</li>
 </ul>
+</div>
+<div id="time-trends-and-time-varying-coefficients" class="section level2">
+<h2><span class="header-section-number">0.8</span> Time Trends and Time-Varying Coefficients</h2>
+<p>The time since the last war is not the only way in which time can affect predictions and inference.</p>
+<p>The baseline probability of civil-war may vary over time. Notably there was an increase in war after the civil war. We could model that as a time-trend, which is an unknown function of <span class="math inline">\(y\)</span> (in this case): <span class="math display">\[
+\eta_{c,y} = x_{c,y}'\beta + f(y)
+\]</span></p>
+<p>In classical regression, special cases of time trends are considered for purposes of parsimony</p>
+<ul>
+<li>No trend</li>
+<li>Linear trend</li>
+<li>Time indicators</li>
+</ul>
+<p>The linear trend is the most restrictive, and including an indicator variable for each unique value of time (e.g. year dummies) is the most restrictive.</p>
+<p>With regularization it is possible to include and estimate flexible time trend while using the shrinkage prior to impose parsimony.</p>
+<ul>
+<li>Re-estimate the model with a flexible time trend.</li>
+<li>How would you extend the model to include time-varying coefficients on these variables? At least write it out it, if not try to estimate the model.</li>
+</ul>
+<div id="references" class="section level3 unnumbered">
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-BeckKatzTucker1998a">
+<p>Beck, Nathaniel, Jonathan N. Katz, and Richard Tucker. 1998. “Taking Time Seriously: Time-Series-Cross-Section Analysis with a Binary Dependent Variable.” <em>American Journal of Political Science</em> 42 (4). [Midwest Political Science Association, Wiley]: 1260–88. <a href="http://www.jstor.org/stable/2991857" class="uri">http://www.jstor.org/stable/2991857</a>.</p>
+</div>
+<div id="ref-Box-SteffensmeierZorn2001a">
+<p>Box-Steffensmeier, Janet M., and Christopher J. W. Zorn. 2001. “Duration Models and Proportional Hazards in Political Science.” <em>American Journal of Political Science</em> 45 (4). [Midwest Political Science Association, Wiley]: 972–88. <a href="http://www.jstor.org/stable/2669335" class="uri">http://www.jstor.org/stable/2669335</a>.</p>
+</div>
+<div id="ref-CarterSignorino2010a">
+<p>Carter, David B., and Curtis S. Signorino. 2010. “Back to the Future: Modeling Time Dependence in Binary Data.” <em>Political Analysis</em> 18 (03). Cambridge University Press (CUP): 271–92. doi:<a href="https://doi.org/10.1093/pan/mpq013">10.1093/pan/mpq013</a>.</p>
+</div>
+<div id="ref-FearonLaitin2003a">
+<p>Fearon, James D., and David D. Laitin. 2003. “Ethnicity, Insurgency, and Civil War.” <em>American Political Science Review</em> 97 (01). Cambridge University Press (CUP): 75–90. doi:<a href="https://doi.org/10.1017/s0003055403000534">10.1017/s0003055403000534</a>.</p>
+</div>
+<div id="ref-MontgomeryNyhan2010a">
+<p>Montgomery, Jacob M., and Brendan Nyhan. 2010. “Bayesian Model Averaging: Theoretical Developments and Practical Applications.” <em>Political Analysis</em> 18 (02). Cambridge University Press (CUP): 245–70. doi:<a href="https://doi.org/10.1093/pan/mpq001">10.1093/pan/mpq001</a>.</p>
+</div>
+</div>
+</div>
 </div>
 <div class="footnotes">
 <hr />
 <ol>
-<li id="fn1"><p>Add these to your <code>.Rprofile</code> file in order to avoid having to set them each time: <a href="http://www.statmethods.net/interface/customizing.html" class="uri">http://www.statmethods.net/interface/customizing.html</a>.<a href="#fnref1">↩</a></p></li>
-<li id="fn2"><p>Though it is discussed in a footnote of <span class="citation">@Fearon2003a [fn. 26]</span>.<a href="#fnref2">↩</a></p></li>
+<li id="fn1"><p>Though it is discussed in a footnote of <span class="citation">Fearon and Laitin (2003 fn. 26)</span>.<a href="#fnref1">↩</a></p></li>
 </ol>
 </div>
 
