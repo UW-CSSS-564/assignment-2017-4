@@ -13,42 +13,57 @@ This assignment will require the following R packages:
 ```{r, message=FALSE}
 library("rstan")
 library("rstanarm")
-library("foreign")
+library("haven")
 library("tidyverse")
 library("loo")
 ```
 
-Set these for fast sampling
+Set the following options for faster sampling sampling.[^rprofile]
+This option sets the default to save a compiled model to disk and reuse it if the code hasn't changed. 
+This will avoid needless recompilation.
 ```{r}
 rstan_options(auto_write = TRUE)
+```
+If you sample with multiple chains and your computer has multiple cores, this will run the chains in parallel.
+```{r}
 options(mc.cores = parallel::detectCores())
 ```
 
+[^rprofile]: Add these to your `.Rprofile` file in order to avoid having to set them each time: http://www.statmethods.net/interface/customizing.html.
 
 @FearonLaitin2003 is a famous paper in the civil war (intra-state) war literature.
-It analyzes the factors associated with the onset of civil war 
-
+It analyzes the factors associated with the onset of civil (intra-state) war between 1945--99.
+They consider a variety of variables such as prior civil wars, per-capita income, population, non-contiguous state, oil-exporter, new-state, democracy, ethnic fractionalization.
 
 @MontgomeryNyhan2010a replicate this work using Bayesian Model Averaging.
-We will replicate it using regularization methods. 
-Replication data is [here](http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip).
+This assignment pursues a similar replication, but we will use regularization 
+The replication data for the original paper is [here](http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip).
 
-```{r}
-wars <- read.dta('nwarsl.dta')
-other <- read.dta('fl.dta')
-df <- inner_join(wars, other, by = c('ccode', 'year'))
-df <- df[df$onset != 4,]  # coding error
-df$loglang <- log(df$numlang)
-keepvars <- "onset warl gdpenl lpopl1 lmtnest ncontig Oil nwstate instab polity2l ethfrac relfrac anocl deml nwarsl plural plurrel muslim loglang colfra eeurop lamerica ssafrica asia nafrme second"
-keepvars <- strsplit(keepvars, split = " ")[[1]]
-df <- df[,keepvars]
+The original code is con
+```{r cleaning}
+# variables we'll use later
+keepvars <- c("onset", "warl", "gdpenl", "lpopl1", "lmtnest", "ncontig",
+"Oil", "nwstate", "instab", "polity2l", "ethfrac", "relfrac",
+"anocl", "deml", "nwarsl", "plural", "plurrel", "muslim", "loglang", 
+"colfra", "eeurop", "lamerica", "ssafrica", "asia", "nafrme", 
+"second")
+
+# original Fearon & Laitin war
+fl <- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/data/fl.dta?raw=true') %>%
+# remove a coding error
+  filter(onset != 4) %>%
+  # add the count of wars in neighboring countries
+  inner_join(read_dta("https://github.com/UW-CSSS-564/assignment-2017-4/raw/master/data/nwarsl.dta"), by = c("ccode", "year")) %>%
+  # log(number of languages)
+  mutate(loglang = log(numlang)) %>%
+  select(one_of(keepvars))
 ```
 
-## Prediction with Bayesian Penalized Regression
+## Replicating Fearon and Laitin
 
 Let $y_{c,y} \in \{0, 1\}$ be whether country $c$ in year $y$ has the onset of a 
 civil war.
-We will model this as a logistic model in which the probability of civil war onset, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}$.
+We will model this as a logistic model in which the probability of civil war onset for a country-year, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}$.
 $$
 \begin{aligned}[t]
 y_{c,y} &\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
@@ -56,45 +71,84 @@ y_{c,y} &\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
 \eta_{c,y} &= x_{c,y} \beta 
 \end{aligned}
 $$
+We will consider various prior distributions of the coefficient parameters, $\beta$.
 
-Estimate the two models that BMA uses in the paper (with weakly informative priors), and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you're unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by Fearon and Laitin, and they are specified in the `f&l-rep.do` file in the reference-code directory, which is a Stata file. It shouldn't be too hard to figure out the model specification from this file, but Slack message one of us if you need a hint.
+Estimate the two models that @MontgomeryNyhan2010a uses in the paper using weakly informative priors,
 $$
 \begin{aligned}[t]
 \beta_0 &\sim N(0, 5) \\
 \beta_k &\sim N(0, 2.5) & \text{for $k \in 1, \dots, K$.}
 \end{aligned} 
 $$
-Example:
-```{r}
-mod <- stan_glm(onset ~ loglang, family = binomial(), data = df)
+
+and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you're unfamiliar with (we had to do this to write this question!). 
+The two logit models are the first and third used by @FearonLaitin2003a.
+The original paper used Stata, and the code is contained in the file [reference-code/f&l-rep.do](https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do).
+In Stata, the command `logit` is followed by the response variable and a lists of the predictors.
+
+To estimate this (and the other models).
+You can directly use either a Stan model, as we have used in class, or use the **rstanarm** package.
+The function `stan_glm` can estimate the 
+See thhe vignette [Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm](https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html) describes 
+
+Here's a few examples which run similar logit models:
+```{r results='hide'}
+mod <- stan_glm(onset ~ loglang, family = binomial(), data = fl)
 loo_mod <- loo(mod)
-mod2 <- stan_glm(onset ~ loglang + Oil, family = binomial(), data = df)
+mod2 <- stan_glm(onset ~ loglang + Oil, family = binomial(), data = fl)
 loo_mod2 <- loo(mod2)
 compare(loo_mod, loo_mod2)
 ```
 
-Now estimate this model with all 25 predictor variables and the following priors
+## Regularization Priors
+
+Now estimate this model with all 25 predictor variables and the following priors.
+See
+```
+?priors
+```
+for more information.
 
 1. Weakly informative (as above)
 2. Normal prior
-3. Hierarchical Shrinkage (df = 3)
+3. Hierarchical Shrinkage ($df = 3$)
 
-(Don't do Lasso - since in the Bayesian setting it doesn't make sense)
+- Plot the mean and 90% credible intervals for these models. 
 
-- Compare the LOO-PSIS stats for all these models. Which fits the best? 
-- Is the default LOO method appropriate? If not, discuss an approporiate cross-validation method - (there is no unique answer)
-- What are the model sizes of each method - using the LOO-PSIS method?
-- Plot the mean and 90% credible intervals for these models. How do they differ?
-- The HS prior more agressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a threshhold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature, but think of your own idea---you don't need to consider it formally.
+    - How do the coefficients differ between models?
+    - Which coefficients have the largest effects?
+    - How do these results compare with the models chosen by @FearonLaitin2003?
+    
+## Variable Scaling
 
-Ideas:
+Rerun these models but set `autoscale = FALSE`. 
 
-- Compare posterior predictive distributions for years and countries - does it fit any worse than others? We could calculate posterior predictive distributions of classification.
+- What does this option do?  
+- Which coefficients changed the most?
+- Compare the changes in the coefficients to the standard deviations of these coefficients?
+- Explain how autoscaling affects the priors on the coefficients.
+
+## Model Comparison
+
+- Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean - and how would you address it? 
+- Which model has the best fit?
+- The LOO-PSIS approximates Leave-one-Out cross validation. LOO-CV estimates the out-of-sample model fit by fitting the model to $n-1$ observations and predicting the observation that was not included. Given the structure of the data, is this the out-of-sample quantity of interest? Provide another cross-validation example that may be more appropriate and discuss why. You do not need to implement it.
+- For the best-fitting model, extract the observation level `elpd`. Plot them across time and 
+
+## Model Size
+
+- Compare the model sizes given by `loo` using the results from the previous section. How does that compare to the actual number of parameters in the model? 
+- The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn't to get it "right", but think about the problem prior to finding out how other's have approached (and maybe solved?) the problem.
+
+## Posterior Predictive Checks
+
+Thus far, we've only compared models using the log-posterior values.
+Using a staistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.
+
 
 ## Taking Time Seriously
 
-Generally the probbility of war onset is a function of time since the last war.
-One variable not in the previous models is the time since the last civil war; though it is discussed in a footnote of @Fearon1998a [fn. 26].
+One variable not in the previous models is the time since the last civil war [^time].
 @BeckKatzTucker1998a note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event.
 As such we could rewrite the model
 $$
@@ -103,20 +157,16 @@ $$
 where $d_{i,t}$ is the time since the last civil war or the first observation of that country in the data.
 
 One issue is that we don't know the duration function, $f$.
-Since $f$ is unkown, and the analyst generally has few priors about it, generally a flexible funcitonal form is used. @BeckKatzTucker1998a suggest using a cubic spline, while @CarterSignorino2010a suggest a polynomial.
+Since $f$ is unknown, and the analyst generally has few priors about it, generally a flexible functional form is used. @BeckKatzTucker1998a suggest using a cubic spline, while @CarterSignorino2010a suggest a polynomial.
 In particular, @CarterSignorino2010a suggest a cubic polynomial, meaning the linear predictors now becomes,
 $$
 \eta_{c,y} = x_{c,y}'\beta + \gamma_1 d_{c,y} + \gamma_2 d_{c,y}^2 + \gamma_3 d_{c,y}^3
 $$
 
 - @CarterSignorino2010 argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.
-- (optional?) @Box-SteffensmeierZorn2001a note that including a duration function in the model is equivalent to a "proportional hazards" assumption---meaning that all variables have the same effect on the probability of failure regardless of the duration. They suggest an F-test that interacts all variables with the logarithm of the duration. How would you address this concern using Bayesian regularization?
-- What about an overall time trend? 
+-  @Box-SteffensmeierZorn2001a discuss how including only duration function as above in the model is equivalent to a "proportional hazards" assumption. In this context, it would mean that all variables have the same effect (coefficient) on the probability of failure regardless of the duration. They suggest estimating a model that interacts all the variables with a function of the duration, and running an F-test that all the interactions were zero.  How would you address this concern using Bayesian regularization?
+- The time since the last war is not the only way in which the 
 
-## Hierarchical Model
+[^time]: Though it is discussed in a footnote of @Fearon2003a [fn. 26].
 
-TODO
 
-## Rare Events
-
-Estimate the model with a rare-events estimator
