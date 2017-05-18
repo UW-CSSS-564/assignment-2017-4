@@ -124,8 +124,8 @@ $(document).ready(function () {
 </div>
 
 
-<div id="instructions" class="section level2 unnumbered">
-<h2>Instructions</h2>
+<div id="instructions" class="section level1 unnumbered">
+<h1>Instructions</h1>
 <p>This repository contains the assignment instructions. Submitted solutions will use a <strong>separate</strong> repository.</p>
 <ol style="list-style-type: decimal">
 <li>Fork <a href="https://github.com/UW-CSSS-564/assignment-2017-4-submissions">UW-CSSS-564/assignment-2017-4-submissions</a> repository to your account.</li>
@@ -163,8 +163,8 @@ fl &lt;- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/
   mutate(loglang = log(numlang)) %&gt;%
   select(one_of(keepvars))</code></pre>
 </div>
-<div id="replicating-fearon-and-laitin" class="section level2">
-<h2><span class="header-section-number">0.1</span> Replicating Fearon and Laitin</h2>
+<div id="replicating-fearon-and-laitin" class="section level1">
+<h1><span class="header-section-number">1</span> Replicating Fearon and Laitin</h1>
 <p>Let <span class="math inline">\(y_{c,y} \in \{0, 1\}\)</span> be whether country <span class="math inline">\(c\)</span> in year <span class="math inline">\(y\)</span> has the onset of a civil war. We will model this as a logistic model in which the probability of civil war onset for a country-year, <span class="math inline">\(\mu_{c,y}\)</span>, is a function of <span class="math inline">\(K\)</span> predictors, <span class="math inline">\(x_{c,y}\)</span>. <span class="math display">\[
 \begin{aligned}[t]
 y_{c,y} &amp;\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
@@ -186,9 +186,10 @@ loo_mod &lt;- loo(mod)
 mod2 &lt;- stan_glm(onset ~ loglang + Oil, family = binomial(), data = fl)
 loo_mod2 &lt;- loo(mod2)
 compare(loo_mod, loo_mod2)</code></pre>
+<p>When estimating these models ensure that you scale the variables. The priors in <strong>rstanarm</strong> do this automatically when <code>autoscale = TRUE</code> (default). If you are using <strong>rstan</strong>, you will have to do this manually.</p>
 </div>
-<div id="regularization-priors" class="section level2">
-<h2><span class="header-section-number">0.2</span> Regularization Priors</h2>
+<div id="regularization-priors" class="section level1">
+<h1><span class="header-section-number">2</span> Regularization Priors</h1>
 <ul>
 <li><p>Now estimate this model with all 25 predictor variables and the following priors</p>
 <ul>
@@ -203,10 +204,11 @@ compare(loo_mod, loo_mod2)</code></pre>
 <li>How do these results compare with the two models chosen in <span class="citation">Fearon and Laitin (2003)</span>?</li>
 </ul></li>
 </ul>
+<p>As before, be sure that the variables are scaled.</p>
 </div>
-<div id="variable-scaling" class="section level2">
-<h2><span class="header-section-number">0.3</span> Variable Scaling</h2>
-<p>Rerun these models but set <code>autoscale = FALSE</code>.</p>
+<div id="variable-scaling" class="section level1">
+<h1><span class="header-section-number">3</span> Variable Scaling</h1>
+<p>Rerun the weakly informative and hierarchical shrinkage models, but do not scale the variables. Set <code>autoscale = FALSE</code> if using <code>stan_glm</code> or do not scale the parameters if using <strong>rstan</strong>.</p>
 <ul>
 <li>What does this option do?<br />
 </li>
@@ -215,28 +217,30 @@ compare(loo_mod, loo_mod2)</code></pre>
 <li>Explain how rescaling the variables affects the priors on the coefficients.</li>
 </ul>
 </div>
-<div id="model-comparison" class="section level2">
-<h2><span class="header-section-number">0.4</span> Model Comparison</h2>
+<div id="model-comparison" class="section level1">
+<h1><span class="header-section-number">4</span> Model Comparison</h1>
 <ul>
 <li>Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean - and how would you address it?</li>
 <li>Which model has the best fit?</li>
 <li>The LOO-PSIS approximates Leave-one-Out cross validation. LOO-CV estimates the out-of-sample model fit by fitting the model to <span class="math inline">\(n-1\)</span> observations and predicting the observation that was not included. Given the structure of the data, is this the out-of-sample quantity of interest? Provide another cross-validation example that may be more appropriate and discuss why. You do not need to implement it.</li>
-<li>For the best-fitting model, extract the observation level <code>elpd</code>. Plot them across time and</li>
+<li><p>For the best-fitting model, extract the observation level <code>elpd</code>. If <code>foo</code> is an <code>loo</code> object you can extract these as follows,</p>
+<pre class="r"><code>foo$pointwise</code></pre>
+<p>Plot the summaries of the observation level elpd values by year and country. For years and countrys does it work well or poorly?</p></li>
 </ul>
 </div>
-<div id="model-size" class="section level2">
-<h2><span class="header-section-number">0.5</span> Model Size</h2>
+<div id="model-size" class="section level1">
+<h1><span class="header-section-number">5</span> Model Size</h1>
 <ul>
 <li>Compare the model sizes given by <code>loo</code> using the results from the previous section. How does that compare to the actual number of parameters in the model?</li>
 <li>The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn’t to get it “right”, but think about the problem prior to finding out how others have approached (and maybe solved?) the problem.</li>
 </ul>
-</div>
 <div id="posterior-predictive-checks" class="section level2">
-<h2><span class="header-section-number">0.6</span> Posterior Predictive Checks</h2>
+<h2><span class="header-section-number">5.1</span> Posterior Predictive Checks</h2>
 <p>Thus far, we’ve only compared models using the log-posterior values. Using a statistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.</p>
 </div>
-<div id="taking-time-seriously" class="section level2">
-<h2><span class="header-section-number">0.7</span> Taking Time Seriously</h2>
+</div>
+<div id="taking-time-seriously" class="section level1">
+<h1><span class="header-section-number">6</span> Taking Time Seriously</h1>
 <p>One variable not in the previous models is the time since the last civil war.<a href="#fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a> <span class="citation">Beck, Katz, and Tucker (1998)</span> note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event. As such we could rewrite the model <span class="math display">\[
 \eta_{c,y} = x_{c,y}'\beta + f(d_{c,y})
 \]</span> where <span class="math inline">\(d_{i,t}\)</span> is the time since the last civil war or the first observation of that country in the data.</p>
@@ -248,8 +252,8 @@ compare(loo_mod, loo_mod2)</code></pre>
 <li><span class="citation">Box-Steffensmeier and Zorn (2001)</span> discuss how including only duration function as above in the model is equivalent to a “proportional hazards” assumption. In this context, it would mean that all variables have the same effect (coefficient) on the probability of failure regardless of the duration. They suggest estimating a model that interacts all the variables with a function of the duration, and running an F-test that all the interactions were zero. How would you address this concern using Bayesian regularization?</li>
 </ul>
 </div>
-<div id="time-trends-and-time-varying-coefficients" class="section level2">
-<h2><span class="header-section-number">0.8</span> Time Trends and Time-Varying Coefficients</h2>
+<div id="time-trends-and-time-varying-coefficients" class="section level1">
+<h1><span class="header-section-number">7</span> Time Trends and Time-Varying Coefficients</h1>
 <p>The time since the last war is not the only way in which time can affect predictions and inference.</p>
 <p>The baseline probability of civil-war may vary over time. Notably there was an increase in war after the civil war. We could model that as a time-trend, which is an unknown function of <span class="math inline">\(y\)</span> (in this case): <span class="math display">\[
 \eta_{c,y} = x_{c,y}'\beta + f(y)
@@ -266,8 +270,41 @@ compare(loo_mod, loo_mod2)</code></pre>
 <li>Re-estimate the model with a flexible time trend.</li>
 <li>How would you extend the model to include time-varying coefficients on these variables? At least write it out it, if not try to estimate the model.</li>
 </ul>
-<div id="references" class="section level3 unnumbered">
-<h3>References</h3>
+</div>
+<div id="changelog" class="section level1 unnumbered">
+<h1>Changelog</h1>
+<p>See this <a href="https://github.com/UW-CSSS-564/assignment-2017-4/compare/d47e09ffb96f4944fb37c505f2441359a3cca662...master">page</a> for any differences between when the assignment was released and the current version.</p>
+<div id="section" class="section level2 unnumbered">
+<h2>2017-05-17</h2>
+<ul>
+<li><p>Replicating Fearon and Laitin</p>
+<ul>
+<li>add reminder and instructions to rescale variable</li>
+</ul></li>
+<li><p>Regularization Priors</p>
+<ul>
+<li>add reminder and instructions to rescale variable</li>
+</ul></li>
+<li><p>Variable Scaling</p>
+<ul>
+<li>clarify that the user is to run the weakly informative and hierarchical shrinkage models.</li>
+</ul></li>
+<li><p>Model Comparison</p>
+<ul>
+<li>On last problem, edit the instructions for clarity.</li>
+<li>Provide examples for extracting pointwise elpd values</li>
+</ul></li>
+<li><p>Other</p>
+<ul>
+<li>Add CHANGELOG</li>
+<li>Fix numbering of problems</li>
+<li>Rename <code>index.pdf</code> to <code>assignment-2017-4.pdf</code></li>
+<li>Add <code>README.md</code> generated from <code>index.Rmd</code></li>
+</ul></li>
+</ul>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2>References</h2>
 <div id="refs" class="references">
 <div id="ref-BeckKatzTucker1998a">
 <p>Beck, Nathaniel, Jonathan N. Katz, and Richard Tucker. 1998. “Taking Time Seriously: Time-Series-Cross-Section Analysis with a Binary Dependent Variable.” <em>American Journal of Political Science</em> 42 (4). [Midwest Political Science Association, Wiley]: 1260–88. <a href="http://www.jstor.org/stable/2991857" class="uri">http://www.jstor.org/stable/2991857</a>.</p>

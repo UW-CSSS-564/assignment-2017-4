@@ -17,7 +17,7 @@ knitr::opts_chunk$set(cache = TRUE, autodep = TRUE)
 ```
 
 
-## Instructions {-}
+# Instructions {-}
 
 This repository contains the assignment instructions.
 Submitted solutions will use a **separate** repository.
@@ -76,7 +76,7 @@ fl <- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/dat
   select(one_of(keepvars))
 ```
 
-## Replicating Fearon and Laitin
+# Replicating Fearon and Laitin
 
 Let $y_{c,y} \in \{0, 1\}$ be whether country $c$ in year $y$ has the onset of a 
 civil war.
@@ -117,7 +117,10 @@ loo_mod2 <- loo(mod2)
 compare(loo_mod, loo_mod2)
 ```
 
-## Regularization Priors
+When estimating these models ensure that you scale the variables. The priors in **rstanarm** do this automatically when `autoscale = TRUE` (default).
+If you are using **rstan**, you will have to do this manually.
+
+# Regularization Priors
 
 -  Now estimate this model with all 25 predictor variables and the following priors 
 
@@ -132,23 +135,29 @@ compare(loo_mod, loo_mod2)
     - Which coefficients have the largest effects?
     - How do these results compare with the two models chosen in @FearonLaitin2003a?
     
-## Variable Scaling
+As before, be sure that the variables are scaled.
+    
+# Variable Scaling
 
-Rerun these models but set `autoscale = FALSE`. 
+Rerun the weakly informative and hierarchical shrinkage models, but do not scale the variables. Set `autoscale = FALSE` if using `stan_glm` or do not scale the parameters if using **rstan**.
 
 - What does this option do?  
 - Which coefficients changed the most?
 - Compare the changes in the coefficients to the standard deviations of these coefficients?
 - Explain how rescaling the variables affects the priors on the coefficients.
 
-## Model Comparison
+# Model Comparison
 
 - Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean - and how would you address it? 
 - Which model has the best fit?
 - The LOO-PSIS approximates Leave-one-Out cross validation. LOO-CV estimates the out-of-sample model fit by fitting the model to $n-1$ observations and predicting the observation that was not included. Given the structure of the data, is this the out-of-sample quantity of interest? Provide another cross-validation example that may be more appropriate and discuss why. You do not need to implement it.
-- For the best-fitting model, extract the observation level `elpd`. Plot them across time and 
+- For the best-fitting model, extract the observation level `elpd`. If `foo` is an `loo`  object you can extract these as follows,
+    ```{r eval=FALSE}
+    foo$pointwise
+    ```
+    Plot the summaries of the observation level elpd values by year and country. For years and countrys does it work well or poorly?
 
-## Model Size
+# Model Size
 
 - Compare the model sizes given by `loo` using the results from the previous section. How does that compare to the actual number of parameters in the model? 
 - The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn't to get it "right", but think about the problem prior to finding out how others have approached (and maybe solved?) the problem.
@@ -159,7 +168,7 @@ Thus far, we've only compared models using the log-posterior values.
 Using a statistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.
 
 
-## Taking Time Seriously
+# Taking Time Seriously
 
 One variable not in the previous models is the time since the last civil war [^time].
 @BeckKatzTucker1998a note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event.
@@ -181,7 +190,7 @@ $$
 
 [^time]: Though it is discussed in a footnote of @FearonLaitin2003a [fn. 26].
 
-## Time Trends and Time-Varying Coefficients
+# Time Trends and Time-Varying Coefficients
 
 The time since the last war is not the only way in which time can affect predictions and inference.
 
@@ -204,4 +213,34 @@ With regularization it is possible to include and estimate flexible time trend w
 - Re-estimate the model with a flexible time trend.
 - How would you extend the model to include time-varying coefficients on these variables? At least write it out it, if not try to estimate the model.
 
-### References
+# Changelog {-}
+
+See this [page](https://github.com/UW-CSSS-564/assignment-2017-4/compare/d47e09ffb96f4944fb37c505f2441359a3cca662...master) for any differences between when the assignment was released and the current version.
+
+## 2017-05-17 {-}
+
+- Replicating Fearon and Laitin
+
+    - add reminder and instructions to rescale variable
+
+- Regularization Priors
+
+    - add reminder and instructions to rescale variable
+    
+- Variable Scaling
+
+    - clarify that the user is to run the weakly informative and hierarchical shrinkage models.
+    
+- Model Comparison    
+
+    - On last problem, edit the instructions for clarity.
+    - Provide examples for extracting pointwise elpd values
+    
+- Other
+
+    - Add CHANGELOG
+    - Fix numbering of problems
+    - Rename `index.pdf` to `assignment-2017-4.pdf`
+    - Add `README.md` generated from `index.Rmd`
+
+## References
