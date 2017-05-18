@@ -174,11 +174,11 @@ y_{c,y} &amp;\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
 \]</span> We will consider various prior distributions of the coefficient parameters, <span class="math inline">\(\beta\)</span>.</p>
 <p>Estimate the two models that <span class="citation">Montgomery and Nyhan (2010)</span> uses in the paper using weakly informative priors, <span class="math display">\[
 \begin{aligned}[t]
-\beta_0 &amp;\sim N(0, 5) \\
+\beta_0 &amp;\sim N(0, 10) \\
 \beta_k &amp;\sim N(0, 2.5) &amp; \text{for $k \in 1, \dots, K$.}
 \end{aligned} 
-\]</span></p>
-<p>and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you’re unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by <span class="citation">Fearon and Laitin (2003)</span>. The original paper used Stata, and the code is contained in the file <a href="https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do">reference-code/f&amp;l-rep.do</a>. In Stata, the command <code>logit</code> is followed by the response variable and a lists of the predictors.</p>
+\]</span> Originally this read <span class="math inline">\(\beta_0 \sim N(0, 5)\)</span>, which should also work (but is slighlty more restrictive, especially since civil war is very rare).</p>
+<p>Calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you’re unfamiliar with (we had to do this to write this question!). The two logit models are the first and third used by <span class="citation">Fearon and Laitin (2003)</span>. The original paper used Stata, and the code is contained in the file <a href="https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do">reference-code/f&amp;l-rep.do</a>. In Stata, the command <code>logit</code> is followed by the response variable and a lists of the predictors.</p>
 <p>To estimate this (and the other models). You can directly use either a Stan model, as we have used in class, or use the <strong>rstanarm</strong> package. The function <code>stan_glm</code> can estimate the See the vignette <a href="https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html">Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm</a> describes</p>
 <p>Here’s a few examples which run similar logit models:</p>
 <pre class="r"><code>mod &lt;- stan_glm(onset ~ loglang, family = binomial(), data = fl)
@@ -193,8 +193,8 @@ compare(loo_mod, loo_mod2)</code></pre>
 <ul>
 <li><p>Now estimate this model with all 25 predictor variables and the following priors</p>
 <ul>
-<li>weakly informative priors</li>
-<li>hierarchical shrinkage prior</li>
+<li>weakly informative priors (prior <code>normal()</code> in <code>stan_glm</code>)</li>
+<li>hierarchical shrinkage prior (prior <code>hs()</code> in <code>stan_glm</code>). <strong>This may take a long time</strong> Try reducing the step size with <code>adapt_delta = 0.999</code> or even closer to 1.</li>
 </ul>
 <p>You can use either <strong>rstan</strong> or <strong>rstanarm</strong>.</p></li>
 <li><p>Plot the mean and 90% credible intervals for these models.</p>
@@ -208,7 +208,7 @@ compare(loo_mod, loo_mod2)</code></pre>
 </div>
 <div id="variable-scaling" class="section level1">
 <h1><span class="header-section-number">3</span> Variable Scaling</h1>
-<p>Rerun the weakly informative and hierarchical shrinkage models, but do not scale the variables. Set <code>autoscale = FALSE</code> if using <code>stan_glm</code> or do not scale the parameters if using <strong>rstan</strong>.</p>
+<p>Rerun the weakly informative model, but do not scale the variables. Set <code>autoscale = FALSE</code> if using <code>stan_glm</code> or do not scale the parameters if using <strong>rstan</strong>.</p>
 <ul>
 <li>What does this option do?<br />
 </li>
@@ -300,6 +300,24 @@ compare(loo_mod, loo_mod2)</code></pre>
 <li>Fix numbering of problems</li>
 <li>Rename <code>index.pdf</code> to <code>assignment-2017-4.pdf</code></li>
 <li>Add <code>README.md</code> generated from <code>index.Rmd</code></li>
+</ul></li>
+</ul>
+</div>
+<div id="section-1" class="section level2 unnumbered">
+<h2>2017-05-18</h2>
+<ul>
+<li><p>Variable Scaling</p>
+<ul>
+<li>Only run variable scaling for the weakly informative normal prior.</li>
+</ul></li>
+<li><p>Replicating Fearon and Laitin</p>
+<ul>
+<li>Change weakly informative normal distribution to <span class="math inline">\(N(0, 10)\)</span>. This shouldn’t matter much, and <span class="math inline">\(N(0, 5)\)</span> will also work. This is in line with the defaults of <code>stan_glm</code>.</li>
+</ul></li>
+<li><p>Regularization Priors</p>
+<ul>
+<li>Add note with the specific priors in <code>stan_glm</code></li>
+<li>Add note that the hierarchical shrinkage prior may take a long time to run.</li>
 </ul></li>
 </ul>
 </div>

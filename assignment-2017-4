@@ -1,7 +1,0 @@
-*.rds
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
-*.sav
-*_cache

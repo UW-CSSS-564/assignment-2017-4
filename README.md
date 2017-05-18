@@ -86,14 +86,17 @@ Estimate the two models that Montgomery and Nyhan (2010) uses in the
 paper using weakly informative priors,
 $$
 \\begin{aligned}\[t\]
-\\beta\_0 &\\sim N(0, 5) \\\\
+\\beta\_0 &\\sim N(0, 10) \\\\
 \\beta\_k &\\sim N(0, 2.5) & \\text{for $k \\in 1, \\dots, K$.}
 \\end{aligned} 
 $$
+ Originally this read *β*<sub>0</sub> ∼ *N*(0, 5), which should also
+work (but is slighlty more restrictive, especially since civil war is
+very rare).
 
-and calculate the LOO performance of these methods. When replicating
-results from papers, you will often have to dig through some confusing
-code or files, perhaps in programming languages or file formats you're
+Calculate the LOO performance of these methods. When replicating results
+from papers, you will often have to dig through some confusing code or
+files, perhaps in programming languages or file formats you're
 unfamiliar with (we had to do this to write this question!). The two
 logit models are the first and third used by Fearon and Laitin (2003).
 The original paper used Stata, and the code is contained in the file
@@ -127,8 +130,10 @@ Regularization Priors
 -   Now estimate this model with all 25 predictor variables and the
     following priors
 
-    -   weakly informative priors
-    -   hierarchical shrinkage prior
+    -   weakly informative priors (prior `normal()` in `stan_glm`)
+    -   hierarchical shrinkage prior (prior `hs()` in `stan_glm`).
+        **This may take a long time** Try reducing the step size with
+        `adapt_delta = 0.999` or even closer to 1.
 
     You can use either **rstan** or **rstanarm**.
 
@@ -144,9 +149,9 @@ As before, be sure that the variables are scaled.
 Variable Scaling
 ================
 
-Rerun the weakly informative and hierarchical shrinkage models, but do
-not scale the variables. Set `autoscale = FALSE` if using `stan_glm` or
-do not scale the parameters if using **rstan**.
+Rerun the weakly informative model, but do not scale the variables. Set
+`autoscale = FALSE` if using `stan_glm` or do not scale the parameters
+if using **rstan**.
 
 -   What does this option do?  
 -   Which coefficients changed the most?
@@ -299,6 +304,26 @@ current version.
     -   Fix numbering of problems
     -   Rename `index.pdf` to `assignment-2017-4.pdf`
     -   Add `README.md` generated from `index.Rmd`
+
+2017-05-18
+----------
+
+-   Variable Scaling
+
+    -   Only run variable scaling for the weakly informative normal
+        prior.
+
+-   Replicating Fearon and Laitin
+
+    -   Change weakly informative normal distribution to *N*(0, 10).
+        This shouldn't matter much, and *N*(0, 5) will also work. This
+        is in line with the defaults of `stan_glm`.
+
+-   Regularization Priors
+
+    -   Add note with the specific priors in `stan_glm`
+    -   Add note that the hierarchical shrinkage prior may take a long
+        time to run.
 
 References
 ----------
