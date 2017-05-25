@@ -116,6 +116,7 @@ m3 <- stan_glm(onset ~ warl + gdpenl + lpopl1 + lmtnest + ncontig + Oil + nwstat
 
 m3
 ```
+The autoscale option when set to true allows prior scales to be adjusted internally based on the scales of the predictors. Setting autosclae to false makes this adjustment not happen. The intercept changed the most, from -8.9 to -7. However, the standard deviations of the estimated coefficients are now larger. Rescaling the variables allows the priors on the coefficients to have more influence because then the coefficiets are adjusted according to the prior's scale. 
 
 
 ## Problem 4 Model Comparison
