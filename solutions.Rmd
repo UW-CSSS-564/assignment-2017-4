@@ -1,0 +1,240 @@
+---
+title: 'STAT/CSSS 564: Assignment 4'
+author: Kirsten Wiens
+date: 'May 23, 2017'
+output:
+  html_document:
+    toc: false
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE}
+# load packages
+library("rstan")
+library("rstanarm")
+library("haven")
+library("tidyverse")
+library("loo")
+```
+
+```{r}
+# for faster sampling using Stan, avoids needless recompilation
+rstan_options(auto_write = TRUE)
+```
+
+```{r}
+# run Stan models in parallel if possible
+options(mc.cores = parallel::detectCores())
+```
+
+```{r cleaning}
+# variables we'll use later
+keepvars <- c("ccode", "country", "year", "onset", "warl", "gdpenl", "lpopl1", "lmtnest", "ncontig",
+"Oil", "nwstate", "instab", "polity2l", "ethfrac", "relfrac",
+"anocl", "deml", "nwarsl", "plural", "plurrel", "muslim", "loglang", 
+"colfra", "eeurop", "lamerica", "ssafrica", "asia", "nafrme", 
+"second")
+
+# original Fearon & Laitin war
+fl <- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/data/fl.dta?raw=true') %>%
+# remove a coding error
+  filter(onset != 4) %>%
+  # add the count of wars in neighboring countries
+  inner_join(read_dta("https://github.com/UW-CSSS-564/assignment-2017-4/raw/master/data/nwarsl.dta"), by = c("ccode", "year")) %>%
+  # log(number of languages)
+  mutate(loglang = log(numlang)) %>%
+  select(one_of(keepvars))
+```
+
+# Replicating Fearon and Laitin
+
+Run the models:
+```{r results='hide' }
+# run model 1 with predictor loglang
+mod1 <- stan_glm(onset ~ loglang, family = binomial(), data = fl, prior_intercept = normal(0,10), prior = normal(0, 2.5), chains = 2, iter = 1000)
+
+# run model 2 with predictors loglang and Oil
+mod2 <- stan_glm(onset ~ loglang + Oil, family = binomial(), data = fl, prior_intercept = normal(0,10), prior = normal(0, 2.5), chains = 2, iter = 1000)
+```
+
+Show model summaries and compare the models using loo:
+```{r}
+# show summary of model 1
+summary(mod1)
+
+# calculate loo for model 1
+loo_mod1 <- loo(mod1)
+loo_mod1
+
+# show summary of model 2
+summary(mod2)
+
+# calculate loo for model 2
+loo_mod2 <- loo(mod2)
+loo_mod2
+
+# compare the models using loo
+compare(loo_mod1, loo_mod2)
+```
+
+# Regularizing Priors
+
+Run the models:
+```{r results='hide', }
+# run model 3 with all variables and a weakly informative prior
+# use preferred prior from previous question N(0, 2.5)
+mod3 <- stan_glm(onset ~ warl + gdpenl + lpopl1 + lmtnest + ncontig + Oil + nwstate + instab + polity2l + ethfrac + relfrac + anocl + deml + nwarsl + plural + plurrel + muslim + loglang + colfra + eeurop + lamerica + ssafrica + asia + nafrme + second, family = binomial(), data = fl,  prior_intercept = normal(0,10), prior = normal(0, 2.5), chains = 2, iter = 1000)
+
+# run model 4 with all variables and a hierarchical shrinkage prior
+# use the prior hs(2, 0.02)
+mod4 <- stan_glm(onset ~ warl + gdpenl + lpopl1 + lmtnest + ncontig + Oil + nwstate + instab + polity2l + ethfrac + relfrac + anocl + deml + nwarsl + plural + plurrel + muslim + loglang + colfra + eeurop + lamerica + ssafrica + asia + nafrme + second, family = binomial(), data = fl,  prior_intercept = normal(0,10), prior = hs(df = 2, global_scale = 0.02), adapt_delta = 0.6, chains = 2, iter = 1000)
+```
+
+Show model summaries indicating means and credible intervals:
+```{r}
+# show summary of model 3 (weak prior)
+summary(mod3)
+
+# show summary of model 4 (shrinkage prior)
+summary(mod4)
+```
+
+- The coefficients are closer to 0, have lower standard deviations, and have narrower credible intervals for the model with the hierarchical shrinkage prior.
+- Using the model with the weak prior, the coefficients with largest effects are (1) whether it is a new state and (2) the religious fractionalization. Using the model with the shrinkage prior the coefficient with largest effect is (1) whether it is a new state and the religious fraction has no effect (although, for both models the 95% credible interval for religious fractionalization crosses 0 so hard conclude anything).
+
+# Variable Scaling
+
+Run a model with a weakly informative prior without variable scaling:
+```{r results='hide'}
+# run model 3 with autoscale set to FALSE
+mod5 <- stan_glm(onset ~ warl + gdpenl + lpopl1 + lmtnest + ncontig + Oil + nwstate + instab + polity2l + ethfrac + relfrac + anocl + deml + nwarsl + plural + plurrel + muslim + loglang + colfra + eeurop + lamerica + ssafrica + asia + nafrme + second, family = binomial(), data = fl,  prior_intercept = normal(0,1, autoscale = FALSE), prior = normal(0, 1, autoscale = FALSE), chains = 2, iter = 1000)
+```
+
+Show model summary:
+```{r}
+summary(mod5)
+```
+
+- The autoscale option centers the variable means at 0 and therefore it standardizes the effect of the prior on the parameter coefficients.
+
+When I modified Model 3 the run didn't work, so I set the scales = 1. It's harder to compare the models now, but this is what I observed:
+- The coefficients for relgious fraction and the different regions changed the most.
+- The effects of each variable are smaller and the standard deviations are smaller.
+
+# Model Comparison
+
+Compare the models using loo:
+```{r}
+# calculate loo for model 3 (weak prior)
+loo_mod3 <- loo(mod3)
+loo_mod3
+
+# calculate loo for model 4 (shrinkage prior)
+loo_mod4 <- loo(mod4)
+loo_mod4
+
+# compare the models using loo
+compare(loo_mod3, loo_mod4)
+```
+
+- I got the warnings: "Found 16 observations with a pareto_k > 0.7. With this many problematic observations we recommend calling 'kfold' with argument 'K=10' to perform 10-fold cross-validation rather than LOO." This means that the estimated tail shape parameter, k, is larger than 0.5 for 16 observations, and therefore the variance of the PSIS estimate is large. For a better model evaluation we could perform 10-fold cross-validation by calling 'kfold' with the argument 'K=10' (as indicated by the warning). 
+
+- Model 4 (with the hierarchical shrinkage prior) is better (elpd_diff = 2.4; elpd_loo is closer to 0 for Model 4 indicating that deviance is smaller and predictive ability is better).
+
+Plot observed elpd by country code and by year:
+```{r}
+# remove any rows with NaN
+row.has.na <- apply(fl, 1, function(x){any(is.na(x))})
+fl.filtered <- fl[!row.has.na,]
+
+# extract elpd values and append to dataset
+elpd <- as.data.frame(loo_mod4$pointwise)
+fl.filtered$elpd_obs <- elpd$elpd_loo
+
+# plot observed elpd values by country
+plot(fl.filtered$ccode, fl.filtered$elpd_obs, ylab = "observed elpd", xlab = "country code")
+
+# plot observed elpd values by year
+plot(fl.filtered$year, fl.filtered$elpd_obs, ylab = "observed elpd", xlab = "year")
+```
+# Model size
+
+- The effective parameter number p is smaller for the loo estimates than for the original models. Why?
+- Coefficients could be treated effectively as 0 when they do not impact the predictive ability of the model? Determine some kind of threshold using LOO?
+
+## Posterior predictive checks
+
+I'm using the number of civil war onsets that occurred (actual and predicted) as the posterior predictive check statistic:
+```{r}
+# calculate the actual number of onsets in the dataset
+obs_onset <- sum(fl$onset == 1)
+
+# calculate posterior predictive with 500 draws from Models 3 and 4
+pp.mod4 <- posterior_predict(mod4, draws = 500)
+
+# count onsets in the posterior predictions for Models 3 and 4
+onset.mod4 <- apply(pp.mod4, 1, function(x) sum(x==1))
+
+# determine the mean difference in number of predicted onsets between the two models
+cat("Mean difference in predicted vs. actual onsets:", mean(abs(onset.mod4 - obs_onset)))
+
+# determine the proportion of posterior predictive estimates that overestimate the number of onsets
+cat("Proportion of predicted onsets that overestimate the actual number of onsets:", mean(onset.mod4 >= obs_onset))
+
+# determine the proportion of posterior predictive estimates that underestimate the number of onsets
+cat("Proportion of predicted onsets that underestimate the actual number of onsets:", mean(onset.mod4 <= obs_onset))
+```
+
+# Taking time seriously
+
+I created variables of duration or time since onset (so present date - year date), as well as variables for the cubic polynomial (so duration^2 and duration^3).
+```{r}
+# remove any rows with NaN
+row.has.na <- apply(fl, 1, function(x){any(is.na(x))})
+fl.filtered <- fl[!row.has.na,]
+
+# create variables of duration (time since onset)
+fl.filtered$duration <- 2017 - fl.filtered$year
+fl.filtered$duration2 <- fl.filtered$duration^2
+fl.filtered$duration3 <- fl.filtered$duration^3
+```
+
+I ran a stan model including the variable duration in a cubic polynomial to estimate the parameter mu. I put regularizing priors on the polynomial coefficients (y_i, y_ii, y_iii). See the file 'time.stan' to check out what I tried with the stan model.
+```{r, results = "hide"}
+# clean data table so only includes variables of interest
+fl.d <- fl.filtered[ , 4:32]
+
+# center variables
+fl.d <- as.data.frame(scale(fl.d, center = TRUE, scale = FALSE))
+
+# indicate the data that will be used in the model
+ fl.mod6 <- list(N = nrow(fl.d), 
+           ons = fl.d$onset,
+           K = ncol(fl.d),
+           X = fl.d,
+           d_i = fl.d$duration,
+           d_ii = fl.d$duration2,
+           d_iii = fl.d$duration3
+           )
+
+# fit a Bayesian model with hs priors on variable coefficients
+# 2 chains and only 500 iterations so it runs faster
+ fit.mod6 <- stan(file = 'time.stan', 
+               data = fl.mod6,
+               chains = 2,
+               iter = 500)
+```
+
+Show model summary (Rhat and Neff are very bad! Something must be wrong with my model):
+```{r}
+# show model summary
+summary(fit.mod6, par = c("a", "y_i", "y_ii", "y_iii"))$summary
+```
+
+# Time trends and time-varying coefficients
+
+I'm a little confused about what this question is asking, and I also ran out of time trying to run these different models on my computer without crashing R :(
