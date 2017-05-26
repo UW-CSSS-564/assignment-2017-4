@@ -1,11 +1,30 @@
 ---
 title: 'STAT/CSSS 564: Assignment 4'
 author: Jeff Arnold & Sheridan Grant
-output: html_document
 date: "May 14, 2017"
+bibliography: assignment4.bib
+output:
+  html_document:
+    toc: false
+    number_sections: true
+  pdf_document:
+    toc: false
+    number_sections: true
 ---
 
-## Instructions
+```{r include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, autodep = TRUE)
+```
+
+
+# Instructions {-}
+
+This repository contains the assignment instructions.
+Submitted solutions will use a **separate** repository.
+
+1. Fork [UW-CSSS-564/assignment-2017-4-submissions](https://github.com/UW-CSSS-564/assignment-2017-4-submissions) repository to your account.
+2. Edit the file `README.Rmd` with your solutions to the problems.
+3. Submit a pull request to have it graded. Include either or both a HTML and PDF file.
 
 For updates and questions follow the Slack channel: [#assignment4](https://uwcsss564.slack.com/messages/C5DBV8266).
 
@@ -18,7 +37,7 @@ library("tidyverse")
 library("loo")
 ```
 
-Set the following options for faster sampling sampling.[^rprofile]
+Set the following options for faster sampling sampling.
 This option sets the default to save a compiled model to disk and reuse it if the code hasn't changed. 
 This will avoid needless recompilation.
 ```{r}
@@ -29,17 +48,14 @@ If you sample with multiple chains and your computer has multiple cores, this wi
 options(mc.cores = parallel::detectCores())
 ```
 
-[^rprofile]: Add these to your `.Rprofile` file in order to avoid having to set them each time: http://www.statmethods.net/interface/customizing.html.
-
-@FearonLaitin2003 is a famous paper in the civil war (intra-state) war literature.
-It analyzes the factors associated with the onset of civil (intra-state) war between 1945--99.
+@FearonLaitin2003a is a famous paper in the civil war (intra-state) war literature.
+It analyzes the factors associated with the onset of civil (intra-state) war between 1945 and 1999.
 They consider a variety of variables such as prior civil wars, per-capita income, population, non-contiguous state, oil-exporter, new-state, democracy, ethnic fractionalization.
 
 @MontgomeryNyhan2010a replicate this work using Bayesian Model Averaging.
-This assignment pursues a similar replication, but we will use regularization 
+This assignment pursues a similar replication, but we will use regularization.
 The replication data for the original paper is [here](http://www.dartmouth.edu/~nyhan/montgomery-nyhan-replication.zip).
 
-The original code is con
 ```{r cleaning}
 # variables we'll use later
 keepvars <- c("onset", "warl", "gdpenl", "lpopl1", "lmtnest", "ncontig",
@@ -59,16 +75,16 @@ fl <- read_dta('https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/dat
   select(one_of(keepvars))
 ```
 
-## Replicating Fearon and Laitin
+# Replicating Fearon and Laitin
 
-Let $y_{c,y} \in \{0, 1\}$ be whether country $c$ in year $y$ has the onset of a 
+Let $y_{c,t} \in \{0, 1\}$ be whether country $c$ in year $t$ has the onset of a 
 civil war.
-We will model this as a logistic model in which the probability of civil war onset for a country-year, $\mu_{c,y}$, is a function of $K$ predictors, $x_{c,y}$.
+We will model this as a logistic model in which the probability of civil war onset for a country-year, $\mu_{c,t}$, is a function of $K$ predictors, $x_{c,t}$.
 $$
 \begin{aligned}[t]
-y_{c,y} &\sim \mathsf{Bernoulli}(\mu_{c,y})  \\
-\mu_{c,y} &= \mathrm{logit}^{-1}(\eta_{c,y}) = \frac{1}{1 + \exp(-\eta_{c,y})} \\
-\eta_{c,y} &= x_{c,y} \beta 
+y_{c,t} &\sim \mathsf{Bernoulli}(\mu_{c,t})  \\
+\mu_{c,t} &= \mathrm{logit}^{-1}(\eta_{c,t}) = \frac{1}{1 + \exp(-\eta_{c,t})} \\
+\eta_{c,t} &= x_{c,t} \beta 
 \end{aligned}
 $$
 We will consider various prior distributions of the coefficient parameters, $\beta$.
@@ -76,22 +92,21 @@ We will consider various prior distributions of the coefficient parameters, $\be
 Estimate the two models that @MontgomeryNyhan2010a uses in the paper using weakly informative priors,
 $$
 \begin{aligned}[t]
-\beta_0 &\sim N(0, 5) \\
+\beta_0 &\sim N(0, 10) \\
 \beta_k &\sim N(0, 2.5) & \text{for $k \in 1, \dots, K$.}
 \end{aligned} 
 $$
+Originally this read $\beta_0 \sim N(0, 5)$, which should also work (but is slighlty more restrictive, especially since civil war is very rare).
 
-and calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you're unfamiliar with (we had to do this to write this question!). 
+Calculate the LOO performance of these methods. When replicating results from papers, you will often have to dig through some confusing code or files, perhaps in programming languages or file formats you're unfamiliar with (we had to do this to write this question!). 
 The two logit models are the first and third used by @FearonLaitin2003a.
 The original paper used Stata, and the code is contained in the file [reference-code/f&l-rep.do](https://github.com/UW-CSSS-564/assignment-2017-4/blob/master/reference-code/(8)%20f%26l-rep.do).
 In Stata, the command `logit` is followed by the response variable and a lists of the predictors.
 
-To estimate this (and the other models).
-You can directly use either a Stan model, as we have used in class, or use the **rstanarm** package.
-The function `stan_glm` can estimate the 
-See thhe vignette [Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm](https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html) describes 
+To estimate this (and the other models), you can directly use either a Stan model, as we have used in class, or use the `stan_glm` function in the **rstanarm** package.
+See the vignette [Estimating Generalized Linear Models for Binary and Binomial Data with rstanarm](https://cran.r-project.org/web/packages/rstanarm/vignettes/binomial.html) for help with rstanarm GLMs.
 
-Here's a few examples which run similar logit models:
+Here are a few examples which run similar logit models:
 ```{r results='hide'}
 mod <- stan_glm(onset ~ loglang, family = binomial(), data = fl)
 loo_mod <- loo(mod)
@@ -100,53 +115,58 @@ loo_mod2 <- loo(mod2)
 compare(loo_mod, loo_mod2)
 ```
 
-## Regularization Priors
+When estimating these models ensure that the scale of the variables is accounted for. The priors in **rstanarm** do this automatically when `autoscale = TRUE` (default).
+If you are using **rstan**, you will have to do this manually.
 
-Now estimate this model with all 25 predictor variables and the following priors.
-See
-```
-?priors
-```
-for more information.
+# Regularization Priors
 
-1. Weakly informative (as above)
-2. Normal prior
-3. Hierarchical Shrinkage ($df = 3$)
+-  Now estimate this model with all 25 predictor variables and the following priors:
 
+    - weakly informative priors (prior `normal()` in `stan_glm`)
+    - hierarchical shrinkage prior (prior `hs()` in `stan_glm`). **This may take a long time** Try [reducing adapt_delta](https://cran.r-project.org/web/packages/rstanarm/rstanarm.pdf) to around 0.6 to speed up sampling.
+    
+    You can use either **rstan** or **rstanarm**.
+    
 - Plot the mean and 90% credible intervals for these models. 
 
     - How do the coefficients differ between models?
     - Which coefficients have the largest effects?
-    - How do these results compare with the models chosen by @FearonLaitin2003?
+    - How do these results compare with the two models chosen in @FearonLaitin2003a?
     
-## Variable Scaling
+As before, be sure that the variables are scaled.
+    
+# Variable Scaling
 
-Rerun these models but set `autoscale = FALSE`. 
+Rerun the weakly informative model, but do not scale the variables. Set `autoscale = FALSE` if using `stan_glm` or do not scale the parameters if using **rstan**.
 
 - What does this option do?  
 - Which coefficients changed the most?
-- Compare the changes in the coefficients to the standard deviations of these coefficients?
-- Explain how autoscaling affects the priors on the coefficients.
+- Compare the changes in the coefficients to the standard deviations of these coefficients.
+- Explain how rescaling the variables affects the priors on the coefficients.
 
-## Model Comparison
+# Model Comparison
 
-- Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean - and how would you address it? 
+- Calculate and compare the LOO-PSIS estimates of the elpd for each model. Do you get any warning messages? If so what do they mean, and how would you address it? 
 - Which model has the best fit?
-- The LOO-PSIS approximates Leave-one-Out cross validation. LOO-CV estimates the out-of-sample model fit by fitting the model to $n-1$ observations and predicting the observation that was not included. Given the structure of the data, is this the out-of-sample quantity of interest? Provide another cross-validation example that may be more appropriate and discuss why. You do not need to implement it.
-- For the best-fitting model, extract the observation level `elpd`. Plot them across time and 
+- The LOO-PSIS approximates leave-one-out cross validation. LOO-CV estimates the out-of-sample model fit by fitting the model to $n-1$ observations and predicting the observation that was not included. Given the structure of the data, is this the out-of-sample quantity of interest? Provide another cross-validation example that may be more appropriate and discuss why. You do not need to implement it.
+- For the best-fitting model, extract the observation-level `elpd`. If `foo` is an `loo`  object you can extract these as follows:
+    ```{r eval=FALSE}
+    foo$pointwise
+    ```
+    Plot the summaries of the observation-level elpd values by year and country. For years and countries does it work well or poorly?
 
-## Model Size
+# Model Size
 
-- Compare the model sizes given by `loo` using the results from the previous section. How does that compare to the actual number of parameters in the model? 
-- The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn't to get it "right", but think about the problem prior to finding out how other's have approached (and maybe solved?) the problem.
+- Compare the model sizes given by `loo` using the results from the previous section. How do they compare to the actual number of parameters in the model? 
+- The HS prior more aggressively shrinks coefficients towards zero. Is the mean of any coefficient exactly zero? Can you think of a method to define a thresh-hold where coefficients of some variables could be treated as effectively zero? The solutions will provide some examples from the literature (and my Bayesian notes have references to some), but try to think it through on your own. The idea isn't to get it "right", but think about the problem prior to finding out how others have approached (and maybe solved?) the problem.
 
 ## Posterior Predictive Checks
 
 Thus far, we've only compared models using the log-posterior values.
-Using a staistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.
+Using a statistic of your choice, assess the fit of data generated from the model to the actual data using posterior predictive checks.
 
 
-## Taking Time Seriously
+# Taking Time Seriously
 
 One variable not in the previous models is the time since the last civil war [^time].
 @BeckKatzTucker1998a note that a duration model with time-varying covariates can be represented as a binary choice model that includes a function of the time at risk of the event.
@@ -163,8 +183,77 @@ $$
 \eta_{c,y} = x_{c,y}'\beta + \gamma_1 d_{c,y} + \gamma_2 d_{c,y}^2 + \gamma_3 d_{c,y}^3
 $$
 
-- @CarterSignorino2010 argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.
+- @CarterSignorino2010a argue that a cubic polynomial is usually sufficient to capture the time-dependence in this sort of data. This is another sort of model choice. How would you solve the choice of the the order of the polynomial with regularization? Include this variable, and re-estimate a model.
 -  @Box-SteffensmeierZorn2001a discuss how including only duration function as above in the model is equivalent to a "proportional hazards" assumption. In this context, it would mean that all variables have the same effect (coefficient) on the probability of failure regardless of the duration. They suggest estimating a model that interacts all the variables with a function of the duration, and running an F-test that all the interactions were zero.  How would you address this concern using Bayesian regularization?
-- The time since the last war is not the only way in which the 
 
-[^time]: Though it is discussed in a footnote of @Fearon2003a [fn. 26].
+[^time]: Though it is discussed in a footnote of @FearonLaitin2003a [fn. 26].
+
+# Time Trends and Time-Varying Coefficients
+
+The time since the last war is not the only way in which time can affect predictions and inference.
+
+The baseline probability of civil war may vary over time. Notably there was an increase in war after the civil war.
+We could model that as a time-trend, which is an unknown function of $y$ (in this case):
+$$
+\eta_{c,y} = x_{c,y}'\beta + f(y)
+$$
+
+In classical regression, special cases of time trends are considered for purposes of parsimony
+
+- No trend
+- Linear trend
+- Time indicators
+
+The linear trend is the most restrictive, and including an indicator variable for each unique value of time (e.g. year dummies) is the most restrictive. 
+
+With regularization it is possible to include and estimate flexible time trend while using the shrinkage prior to impose parsimony.
+
+- Re-estimate the model with a flexible time trend.
+- How would you extend the model to include time-varying coefficients on these variables? At least write it out it, if not try to estimate the model.
+
+# Changelog {-}
+
+See this [page](https://github.com/UW-CSSS-564/assignment-2017-4/compare/d47e09ffb96f4944fb37c505f2441359a3cca662...master) for any differences between when the assignment was released and the current version.
+
+## 2017-05-17 {-}
+
+- Replicating Fearon and Laitin
+
+    - add reminder and instructions to rescale variable
+
+- Regularization Priors
+
+    - add reminder and instructions to rescale variable
+    
+- Variable Scaling
+
+    - clarify that the user is to run the weakly informative and hierarchical shrinkage models.
+    
+- Model Comparison    
+
+    - On last problem, edit the instructions for clarity.
+    - Provide examples for extracting pointwise elpd values
+    
+- Other
+
+    - Add CHANGELOG
+    - Fix numbering of problems
+    - Rename `index.pdf` to `assignment-2017-4.pdf`
+    - Add `README.md` generated from `index.Rmd`
+    
+## 2017-05-18 {-}
+
+- Variable Scaling
+
+    - Only run variable scaling for the weakly informative normal prior.
+    
+- Replicating Fearon and Laitin
+
+    - Change weakly informative normal distribution to $N(0, 10)$. This shouldn't matter much, and $N(0, 5)$ will also work. This is in line with the defaults of `stan_glm`.
+    
+- Regularization Priors
+
+    - Add note with the specific priors in `stan_glm`
+    - Add note that the hierarchical shrinkage prior may take a long time to run.
+
+## References
